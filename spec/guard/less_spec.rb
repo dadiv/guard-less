@@ -74,7 +74,7 @@ describe Guard::Less do
     let(:guard) { Guard::Less.new([watcher]) }
 
     let(:guard_with_one_to_one_action) do
-      watcher.action = lambda {|m| "yep/#{m[1]}.less" }
+      watcher.action = lambda {|m| "yes/#{m[1]}.less" }
       Guard::Less.new([watcher])
     end
 
@@ -93,7 +93,7 @@ describe Guard::Less do
     end
 
     it 'executes .run passing all watched LESS files while observing actions provided' do
-      guard_with_one_to_one_action.should_receive(:run).with(['yep/a.less', 'yep/b.less'])
+      guard_with_one_to_one_action.should_receive(:run).with(['yes/a.less', 'yes/b.less'])
       guard_with_one_to_one_action.run_all
     end
 
@@ -127,7 +127,7 @@ describe Guard::Less do
     end
 
     context 'if watcher misconfigured to match CSS' do
-      let(:guard) { Guard::Less.new([Guard::Watcher.new('^yes/.+\.css$')], :output => nil) }
+      let(:guard) { Guard::Less.new([Guard::Watcher.new(%r{^yes/.+\.css$})], :output => nil) }
 
       it 'does not overwrite CSS' do
         guard.should_not_receive(:compile)
@@ -157,6 +157,23 @@ describe Guard::Less do
           write_stub_less_file('yes/a.less', import=true)
           # touch with :mtime option doesn't seem to work?
           FileUtils.touch(['yes/a.css', 'yes/b.less'])
+          File.utime(Time.now - 5, Time.now - 5, 'yes/a.less')
+          File.utime(Time.now - 3, Time.now - 3, 'yes/a.css')
+        end
+
+        it 'compiles the importing LESS file' do
+          guard.should_receive(:compile)
+          guard.run(['yes/a.less'])
+        end
+      end
+
+      context 'but LESS file has an import in an import_path more recently modified than CSS' do
+        before do
+          guard.options[:import_paths] = ['lib/styles']
+          write_stub_less_file('yes/a.less', import=true)
+          write_stub_less_file('lib/styles/b.less')
+          # touch with :mtime option doesn't seem to work?
+          FileUtils.touch(['yes/a.css', 'lib/styles/b.less'])
           File.utime(Time.now - 5, Time.now - 5, 'yes/a.less')
           File.utime(Time.now - 3, Time.now - 3, 'yes/a.css')
         end

@@ -123,12 +123,25 @@ module Guard
       mtimes = [mtime(file)]
       File.readlines(file).each do |line|
         if line =~ /^\s*@import ['"]([^'"]+)/
-          imported = File.join(File.dirname(file), $1)
-          mtimes << if imported =~ /\.le?ss$/ # complete path given ?
+          basename = $1
+          imported = File.join(File.dirname(file), basename)
+          import_mtime = if imported =~ /\.le?ss$/ # complete path given ?
             mtime(imported)
           else # we need to add .less or .lss
             [mtime("#{imported}.less"), mtime("#{imported}.lss")].max
           end
+          # Could be from one of the import paths
+          if import_mtime == 0 and options[:import_paths]
+            options[:import_paths].each do |path|
+              imported = File.join(path, basename)
+              import_mtime = [import_mtime, if imported =~ /\.le?ss$/ # complete path given ?
+                mtime(imported)
+              else # we need to add .less or .lss
+                [mtime("#{imported}.less"), mtime("#{imported}.lss")].max
+              end].max
+            end
+          end
+          mtimes << import_mtime
         end
       end
       mtimes.max
