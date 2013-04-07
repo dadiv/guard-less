@@ -134,7 +134,6 @@ module Guard
           if import_mtime == 0 and options[:import_paths]
             options[:import_paths].each do |path|
               imported = File.join(path, basename)
-              puts imported
               import_mtime = [import_mtime, if imported =~ /\.le?ss$/ # complete path given ?
                 mtime(imported)
               else # we need to add .less or .lss
